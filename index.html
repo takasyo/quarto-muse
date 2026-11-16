@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Quarto — Museと対戦</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@600;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]){min-height:2rem}
+  *{box-sizing:border-box}
+  :root{
+    --bg:#f4ede1; --bg2:#ece1cf; --panel:#fffaf0; --panel2:#f8f1e3;
+    --ink:#2b1d12; --muted:#7a6753; --line:#ddd0b8;
+    --wood:#7c4a21; --wood-dark:#5d3515; --wood-light:#9a6530;
+    --well:#4a2c12; --well-edge:#a97843;
+    --gold:#c9970d; --gold-bg:#fdf3d0;
+    --accent:#9a3412; --accent-ink:#fff7ed;
+    --good:#166534; --shadow:0 10px 30px rgba(60,35,10,.18);
+    --tray-sel:#c9970d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17110c; --bg2:#1f1710; --panel:#241a12; --panel2:#2b2016;
+      --ink:#f3e9d7; --muted:#b8a78f; --line:#433322;
+      --wood:#6e421e; --wood-dark:#4a2a10; --wood-light:#8a5a28;
+      --well:#2e1a0a; --well-edge:#8a5f30;
+      --gold:#e3b341; --gold-bg:#3a2c08;
+      --accent:#ea7a45; --accent-ink:#1d0f06;
+      --good:#7dd79a; --shadow:0 10px 30px rgba(0,0,0,.5);
+      --tray-sel:#e3b341;
+    }
+  }
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Noto Sans JP",system-ui,-apple-system,"Hiragino Sans",sans-serif;
+    background:var(--bg); color:var(--ink);
+    background-image:radial-gradient(ellipse 80% 50% at 50% -10%, var(--bg2), transparent);
+    min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 40px}
+  /* header */
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .top h1{font-family:"Noto Serif JP",serif;font-weight:900;font-size:34px;letter-spacing:.06em;margin:0;line-height:1}
+  .top h1 span{color:var(--accent)}
+  .top p{margin:5px 0 0;color:var(--muted);font-size:13.5px;font-weight:500}
+  .top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  label.diff{font-size:12.5px;font-weight:700;color:var(--muted);display:flex;gap:6px;align-items:center}
+  select{font:inherit;font-size:14px;font-weight:700;color:var(--ink);background:var(--panel);border:1.5px solid var(--line);border-radius:999px;padding:6px 10px}
+  .btn{font:inherit;font-weight:900;font-size:14px;border-radius:999px;padding:8px 16px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn:active{transform:scale(.97)}
+  /* layout */
+  .layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.9fr);gap:18px;align-items:start}
+  @media(max-width:820px){.layout{grid-template-columns:1fr}}
+  /* status */
+  .status{
+    display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:10px 14px;box-shadow:var(--shadow);margin-bottom:14px;min-height:56px;
+  }
+  .status .dot{width:11px;height:11px;border-radius:50%;background:var(--gold);flex:none;box-shadow:0 0 0 4px var(--gold-bg)}
+  .status.thinking .dot{animation:pulse 0.8s ease-in-out infinite alternate}
+  @keyframes pulse{from{opacity:.4}to{opacity:1}}
+  .status b{font-size:15.5px;line-height:1.45}
+  .status small{display:block;color:var(--muted);font-weight:500;font-size:12.5px;margin-top:1px}
+  /* hard mode banner */
+  .hard-banner{
+    display:none;align-items:center;gap:10px;margin:-4px 0 14px;
+    background:#2b1406;color:#ffe9b0;border:1.5px solid #8a5a10;border-radius:12px;
+    padding:9px 13px;font-size:13.5px;line-height:1.55;box-shadow:var(--shadow);
+  }
+  @media (prefers-color-scheme: dark){.hard-banner{background:#3a2405;color:#ffe9b0;border-color:#e3b341}}
+  .hard-banner.show{display:flex}
+  .hard-banner .tag{flex:none;font-weight:900;letter-spacing:.08em;font-size:11px;background:var(--gold);color:#241300;border-radius:999px;padding:4px 9px}
+  .hard-banner b{color:#fff}
+  @media (prefers-color-scheme: dark){.hard-banner b{color:#fff}}
+  .hard-diagram{display:inline-grid;grid-template-columns:1fr 1fr;gap:3px;width:44px;height:44px;vertical-align:middle;margin:0 6px}
+  .hard-diagram i{display:block;border-radius:5px;background:var(--gold);box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.25)}
+  .hard-diagram i.dim{background:var(--panel2);box-shadow:inset 0 0 0 1.5px var(--line)}
+  /* board */
+  .board-frame{
+    background:linear-gradient(145deg,var(--wood-light),var(--wood) 45%,var(--wood-dark));
+    padding:16px;border-radius:22px;box-shadow:var(--shadow), inset 0 2px 0 rgba(255,255,255,.25), inset 0 -3px 0 rgba(0,0,0,.3);
+    position:relative;
+  }
+  .board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%}
+  .cell{
+    aspect-ratio:1;border:none;cursor:pointer;padding:0;position:relative;min-width:0;min-height:0;width:100%;
+    border-radius:50%;
+    background:radial-gradient(circle at 50% 42%, #3a2008 0%, var(--well) 62%, #6b4420 100%);
+    box-shadow:inset 0 6px 12px rgba(0,0,0,.65), inset 0 -2px 3px rgba(255,215,150,.28), 0 1px 0 rgba(255,255,255,.18);
+    display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cell.placeable{cursor:pointer}
+  .cell.placeable::after{
+    content:"";position:absolute;inset:6px;border-radius:50%;
+    border:2px dashed rgba(255,220,150,.0);transition:.15s;
+  }
+  .cell.placeable:hover::after,.cell.placeable:focus-visible::after{border-color:rgba(255,220,150,.85)}
+  body[data-phase="place"] .cell.placeable{animation:wellglow 1.6s ease-in-out infinite}
+  @keyframes wellglow{0%,100%{box-shadow:inset 0 6px 12px rgba(0,0,0,.65),0 0 0 0 rgba(255,205,90,0)}50%{box-shadow:inset 0 6px 12px rgba(0,0,0,.65),0 0 0 3px rgba(255,205,90,.45)}}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  .cell.win{background:radial-gradient(circle at 50% 42%, #6b4a08 0%, #7a5a10 60%, #a97c1e 100%);box-shadow:inset 0 4px 10px rgba(0,0,0,.4),0 0 0 3px var(--gold),0 0 22px rgba(230,180,40,.7)}
+  .cell:disabled{cursor:default;opacity:1}
+  /* pieces */
+  .piece{position:relative;flex:none;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .piece .body{
+    display:flex;align-items:center;justify-content:center;position:relative;flex:none;
+    box-shadow:0 5px 8px rgba(0,0,0,.45), inset 0 2px 2px rgba(255,255,255,.35), inset 0 -4px 6px rgba(0,0,0,.28);
+  }
+  /* height reads as real thickness: tall pieces stand on a thick side wall, short ones are flat discs */
+  .piece.tall.light .body{box-shadow:0 9px 0 #bfa06a, 0 18px 12px rgba(0,0,0,.48), inset 0 2px 2px rgba(255,255,255,.35), inset 0 -4px 6px rgba(0,0,0,.28)}
+  .piece.tall.dark .body{box-shadow:0 9px 0 #150a03, 0 18px 12px rgba(0,0,0,.55), inset 0 2px 2px rgba(255,255,255,.3), inset 0 -4px 6px rgba(0,0,0,.35)}
+  .piece.short.light .body{box-shadow:0 3px 0 #bfa06a, 0 7px 7px rgba(0,0,0,.42), inset 0 2px 2px rgba(255,255,255,.35), inset 0 -3px 5px rgba(0,0,0,.25)}
+  .piece.short.dark .body{box-shadow:0 3px 0 #150a03, 0 7px 7px rgba(0,0,0,.5), inset 0 2px 2px rgba(255,255,255,.3), inset 0 -3px 5px rgba(0,0,0,.3)}
+  /* height gauge beside every piece: full gold bar = tall, small stub = short */
+  .piece .hgauge{position:relative;flex:none;width:5px;margin-left:5px;border-radius:99px;background:rgba(96,64,20,.28);overflow:hidden}
+  @media (prefers-color-scheme: dark){.piece .hgauge{background:rgba(240,210,150,.25)}}
+  .piece .hgauge i{position:absolute;left:0;right:0;bottom:0;border-radius:99px;background:var(--gold)}
+  .piece.tall .hgauge i{height:100%}
+  .piece.short .hgauge i{height:30%}
+  .cell .piece .hgauge{height:42px}
+  .tray .piece .hgauge{height:26px}
+  .hand .piece .hgauge{height:42px}
+  .legend .piece .hgauge{height:19px}
+  .piece.round .body{border-radius:50%}
+  .piece.square .body{border-radius:22%}
+  .piece.light .body{background:linear-gradient(150deg,#f6ecd4,#e2d0a9 70%,#cdb488);border:2px solid #b99b62}
+  .piece.dark .body{background:linear-gradient(150deg,#5a3a20,#3a2312 70%,#241305);border:2px solid #170b02}
+  .piece .hole{width:42%;height:42%;border-radius:50%;background:radial-gradient(circle at 45% 40%, #120801, #000 75%);box-shadow:inset 0 3px 5px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.25)}
+  .piece .cap{width:26%;height:26%;border-radius:50%}
+  .piece.light .cap{background:radial-gradient(circle at 40% 35%, #fff8e6, #d9c08d)}
+  .piece.dark .cap{background:radial-gradient(circle at 40% 35%, #8a5f36, #4a2c12)}
+  /* sizes by context — tall is much bigger than short on purpose, so height reads at a glance */
+  .cell .piece.tall .body{width:66px;height:66px}
+  .cell .piece.short .body{width:38px;height:38px}
+  @media(max-width:480px){
+    .cell .piece.tall .body{width:54px;height:54px}
+    .cell .piece.short .body{width:31px;height:31px}
+    .cell .piece .hgauge{height:34px}
+    .board-frame{padding:11px}.board{gap:7px}
+  }
+  .tray .piece.tall .body{width:40px;height:40px}
+  .tray .piece.short .body{width:25px;height:25px}
+  .hand .piece.tall .body{width:62px;height:62px}
+  .hand .piece.short .body{width:40px;height:40px}
+  .legend .piece.tall .body{width:28px;height:28px}
+  .legend .piece.short .body{width:18px;height:18px}
+  /* hand row */
+  .hand-row{display:flex;gap:14px;align-items:stretch;margin-top:14px}
+  .hand{
+    flex:1;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:10px 14px;display:flex;align-items:center;gap:14px;min-height:92px;box-shadow:var(--shadow);
+  }
+  .hand .slot{width:80px;height:74px;flex:none!important;border-radius:12px;background:var(--panel2);border:1.5px dashed var(--line);display:flex;align-items:center;justify-content:center}
+  .hand.filled .slot{border-style:solid;border-color:var(--gold);background:var(--gold-bg)}
+  .hand h3{margin:0;font-size:13px;color:var(--muted);font-weight:700}
+  .hand p{margin:3px 0 0;font-size:14.5px;font-weight:700;line-height:1.5}
+  .hand p .attrs{color:var(--accent);font-weight:900}
+  /* lifetime record: tucked away at the bottom of the side panel */
+  .score-card{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-weight:700}
+  .score-card b{font-family:"Noto Serif JP",serif;font-size:20px;color:var(--ink);margin:0 2px}
+  .score-card .vs{font-size:12px}
+  /* panel */
+  .panel{display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+  .opp{display:flex;gap:12px;align-items:flex-start}
+  .opp .face{width:66px;height:66px;flex:none}
+  .opp .face svg{width:100%;height:100%;display:block}
+  .opp .who{font-size:12px;font-weight:900;color:var(--muted);letter-spacing:.08em}
+  .mood-chip{
+    display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;vertical-align:1px;
+    background:var(--gold-bg);color:var(--accent);font-size:11px;font-weight:900;letter-spacing:.04em;
+  }
+  .mood-chip[data-mood="confident"]{background:var(--gold);color:#241300}
+  .mood-chip[data-mood="panicked"]{background:#b91c1c;color:#fff}
+  .mood-chip[data-mood="win"]{background:var(--good);color:#fff}
+  @media (prefers-color-scheme: dark){.mood-chip[data-mood="win"]{color:#0c2413}}
+  .bubble{margin-top:3px;font-size:14.5px;line-height:1.65;font-weight:500;min-height:3.2em}
+  .card h2{margin:0 0 4px;font-size:15px;font-weight:900}
+  .card h2 small{color:var(--muted);font-weight:500;font-size:12.5px;margin-left:6px}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.6;margin:0 0 10px}
+  /* tray */
+  .tray{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%}
+  .tray button{
+    border:1.5px solid var(--line);background:var(--panel2);border-radius:12px;cursor:pointer;
+    height:58px;min-width:0;display:flex;align-items:center;justify-content:center;padding:0;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tray button:hover:not(:disabled){border-color:var(--tray-sel)}
+  body[data-phase="give"] .tray button:not(:disabled){border-color:var(--gold)}
+  body[data-phase="give"] .tray button:not(:disabled):hover{background:var(--gold-bg);transform:translateY(-2px)}
+  .tray button:disabled{opacity:.28;cursor:default}
+  .tray button.used{visibility:hidden}
+  /* log */
+  .log{list-style:none;margin:6px 0 0;padding:0;max-height:168px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+  .log li{font-size:13px;line-height:1.55;background:var(--panel2);border-radius:9px;padding:7px 10px}
+  .log li b.you{color:var(--accent)} .log li b.ai{color:#8a5a10}
+  @media (prefers-color-scheme: dark){.log li b.ai{color:#e3b341}}
+  .log .empty{background:none;color:var(--muted);padding:2px 0}
+  /* rules */
+  details.card summary{cursor:pointer;font-weight:900;font-size:15px;list-style:none}
+  details.card summary::-webkit-details-marker{display:none}
+  details.card summary::after{content:"＋";float:right;color:var(--muted)}
+  details.card[open ] summary::after{content:"−"}
+  .rules-body{font-size:13.5px;line-height:1.8;color:var(--ink);margin-top:10px}
+  .rules-body ol{margin:6px 0;padding-left:20px}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:10px}
+  .legend div{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;background:var(--panel2);border-radius:9px;padding:6px 9px;min-height:40px}
+  /* result overlay */
+  .overlay{
+    position:absolute;inset:0;border-radius:22px;display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;
+    background:rgba(20,10,2,.72);text-align:center;padding:20px;z-index:3;
+  }
+  .overlay.show{display:flex}
+  .overlay .quarto{font-family:"Noto Serif JP",serif;font-weight:900;font-size:52px;letter-spacing:.14em;color:#ffd94d;text-shadow:0 4px 18px rgba(0,0,0,.6);line-height:1}
+  .overlay p{color:#fff3d6;font-weight:700;font-size:15.5px;margin:4px 0 12px;line-height:1.6}
+  .foot{margin-top:18px;color:var(--muted);font-size:12.5px;line-height:1.7;text-align:center}
+  /* ---- smartphone: board + hand piece + remaining tray fit in the first screen ---- */
+  @media(max-width:820px){
+    .wrap{padding:10px 10px 28px}
+    .top{margin-bottom:8px;align-items:center}
+    .top h1{font-size:24px}
+    .top p{display:none}
+    .top-actions{gap:6px}
+    label.diff{font-size:11.5px}
+    select{font-size:13px;padding:4px 8px}
+    .btn{font-size:13px;padding:6px 12px}
+    /* Flatten the sidebar so the tray can sit directly under the hand row:
+       play area first, opponent / log / rules below the fold. */
+    .layout{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+    .main-col{display:flex;flex-direction:column;order:1;min-width:0;width:100%}
+    .panel{display:contents}
+    .panel>.card{align-self:stretch;width:100%;min-width:0}
+    .tray-card{order:2}
+    .opp-card{order:3}
+    .log-card{order:4}
+    .panel>details.card{order:5}
+    .score-card{order:6}
+    .opp .face{width:56px;height:56px}
+    .status{margin-bottom:8px;padding:7px 10px;min-height:44px;border-radius:12px}
+    .status b{font-size:14px;line-height:1.35}
+    .status small{font-size:11.5px;line-height:1.35}
+    .hard-banner{margin:-2px 0 8px;padding:6px 9px;font-size:12px;line-height:1.45;border-radius:10px}
+    .hard-diagram{width:28px;height:28px}
+    /* Board spans the full container width. It must NOT be sized with a
+       viewport-height width (min(100%,50dvh)): on iOS WebKit that shrank
+       the frame's box while the grid inside kept the full container width,
+       so the 4th column overflowed off the right edge. Height is kept in
+       check by the compact header / status / hand / tray instead. */
+    .board-frame{padding:9px;border-radius:18px;width:100%;max-width:100%;margin:0;align-self:stretch;min-width:0}
+    .board{gap:6px}
+    .hand-row{margin-top:8px;gap:8px}
+    .hand{min-height:62px;padding:6px 10px;gap:10px;border-radius:12px}
+    .hand .slot{width:56px;height:50px}
+    .hand h3{font-size:11px}
+    .hand p{font-size:13px;line-height:1.4;margin-top:2px}
+    .hand .piece.tall .body{width:44px;height:44px}
+    .hand .piece.short .body{width:28px;height:28px}
+    .hand .piece .hgauge{height:30px}
+    .score-card{padding:8px 12px;border-radius:12px}
+    /* Tray: compact 8 x 2 grid instead of 4 x 4, long hint hidden */
+    .tray-card{padding:8px 10px 10px;border-radius:12px}
+    .tray-card h2{font-size:14px;margin:0 0 6px}
+    .tray-card .hint{display:none}
+    .tray{grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}
+    .tray button{height:42px;border-radius:9px}
+    .tray .piece.tall .body{width:24px;height:24px;border-width:1.5px}
+    .tray .piece.short .body{width:16px;height:16px;border-width:1.5px}
+    .tray .piece .hgauge{height:16px;width:3px;margin-left:2px}
+    .tray .piece.tall.light .body,.tray .piece.tall.dark .body{box-shadow:0 4px 0 rgba(0,0,0,.18),0 6px 6px rgba(0,0,0,.35),inset 0 2px 2px rgba(255,255,255,.35),inset 0 -3px 4px rgba(0,0,0,.25)}
+    .tray .piece.tall.light .body{box-shadow:0 4px 0 #bfa06a,0 6px 6px rgba(0,0,0,.35),inset 0 2px 2px rgba(255,255,255,.35),inset 0 -3px 4px rgba(0,0,0,.25)}
+    .tray .piece.tall.dark .body{box-shadow:0 4px 0 #150a03,0 6px 6px rgba(0,0,0,.45),inset 0 2px 2px rgba(255,255,255,.3),inset 0 -3px 4px rgba(0,0,0,.3)}
+    .tray .piece.short.light .body{box-shadow:0 2px 0 #bfa06a,0 4px 4px rgba(0,0,0,.35),inset 0 2px 2px rgba(255,255,255,.35),inset 0 -2px 3px rgba(0,0,0,.22)}
+    .tray .piece.short.dark .body{box-shadow:0 2px 0 #150a03,0 4px 4px rgba(0,0,0,.42),inset 0 2px 2px rgba(255,255,255,.3),inset 0 -2px 3px rgba(0,0,0,.28)}
+  }
+  @media(max-width:820px) and (max-height:740px){
+    .cell .piece.tall .body{width:46px;height:46px}
+    .cell .piece.short .body{width:27px;height:27px}
+    .cell .piece .hgauge{height:28px}
+    .tray button{height:38px}
+    .hand{min-height:56px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>QUARTO<span>!</span></h1>
+      <p>4つ揃えたら勝ち。渡すピースを選ぶ、ちょっと変わった四目並べ — 相手はMuseです。「つよい」はハードモード：2×2でも勝ちになります。</p>
+    </div>
+    <div class="top-actions">
+      <label class="diff">Museの強さ
+        <select id="diff" aria-label="Museの強さとルール">
+          <option value="easy">かんたん</option>
+          <option value="normal" selected>ふつう</option>
+          <option value="hard">つよい — ハード（2×2でも勝ち）</option>
+        </select>
+      </label>
+      <button class="btn primary" id="restartTop" type="button">最初から</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="main-col">
+      <div class="status" id="statusBox">
+        <span class="dot"></span>
+        <div><b id="statusMain">あなたの番です</b><small id="statusSub"></small></div>
+      </div>
+
+      <div class="hard-banner" id="hardBanner" role="note" aria-live="polite">
+        <span class="tag">HARD</span>
+        <span><b>ハードモード：2×2も勝ち</b> — 縦・横・斜めの1列に加えて、隣り合う<b>2×2のブロック（4マス）</b>に共通する特徴が1つでもあれば勝ちです。渡すピースも置く場所も、ブロックに注意してください。</span>
+      </div>
+
+      <div class="board-frame">
+        <div class="board" id="board" role="grid" aria-label="Quarto盤面"></div>
+        <div class="overlay" id="overlay">
+          <div class="quarto">QUARTO!</div>
+          <p id="overlayText"></p>
+          <button class="btn primary" id="restartOverlay" type="button" style="font-size:15px;padding:10px 22px">もう一局</button>
+        </div>
+      </div>
+
+      <div class="hand-row">
+        <div class="hand" id="handBox">
+          <div class="slot hand" id="handSlot" style="border:none;background:none;box-shadow:none;padding:0;min-height:0"></div>
+          <div>
+            <h3>あなたが置くピース</h3>
+            <p id="handText">まだありません。まず相手に渡すピースを選んでください。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="card opp opp-card">
+        <div class="face" id="faceBox" aria-hidden="true"></div>
+        <div style="flex:1;min-width:0">
+          <div class="who">相手 ・ Muse <span class="mood-chip" id="moodChip" data-mood="calm">ふつう</span></div>
+          <div class="bubble" id="speech">ようこそ。まずは下のピース置き場から、私に渡すピースを1つ選んでください。私がそれを盤に置きます。</div>
+        </div>
+      </div>
+
+      <div class="card tray-card">
+        <h2>ピース置き場<small id="remainCount">残り 16 個</small></h2>
+        <p class="hint" id="trayHint">あなたの「渡す番」のときだけ選べます。相手に渡したくない＝相手が揃えられそうなピースは要注意です。高さの見分け：高いピースは大きくて厚みがあり、横の金色ゲージが満タン。低いピースは小さくて平たく、ゲージは少しだけです。</p>
+        <div class="tray" id="tray"></div>
+      </div>
+
+      <div class="card log-card">
+        <h2>対局の記録</h2>
+        <ul class="log" id="log"><li class="empty">まだ手はありません。</li></ul>
+      </div>
+
+      <details class="card">
+        <summary>遊び方・ルール</summary>
+        <div class="rules-body">
+          <ol>
+            <li><b>渡す → 置く</b> を繰り返します。自分の番に置くピースは、<b>相手が選んで渡してきます</b>。自分では選べません。</li>
+            <li>あなたが渡したピースはMuseが盤に置き、Museが次にあなたへ渡すピースを選びます。</li>
+            <li>縦・横・斜めのどれか1列に並んだ4つのピースに<b>共通する特徴が1つでもあれば</b>、最後に置いた人の勝ちです（「Quarto!」）。</li>
+            <li><b>ハードモード（強さ「つよい」）では 2×2 でも勝ち：</b>隣り合う2×2のブロック
+              <span class="hard-diagram" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              の4つのピースに共通する特徴が1つでもあれば、それも勝ちです。盤のどこでも、2×2は全部で9か所あります。Museも2×2を狙い、2×2で揃うピースは渡してきません。</li>
+            <li>ピースの特徴は4つ：<b>高い／低い</b>、<b>明るい／暗い</b>、<b>丸い／四角い</b>、<b>穴なし／穴あり</b>。16個すべて組み合わせが違います。</li>
+            <li><b>高さの見分け方：</b>高いピースは一回り大きく、側面に厚みがあって、ピース横の金色ゲージが上まで満ちています。低いピースは小さく平たく、ゲージは下の方だけです。</li>
+          </ol>
+          <p style="margin:8px 0 0">コツ：渡すときに「あと1つで揃う列」をよく見て、その特徴を持つピースを渡さないこと。逆に、自分が置くときは揃う列がないか必ず確認しましょう。ハードでは2×2ブロックも同じようにチェックしてください — 3つ埋まったブロックは列と同じくらい危険です。</p>
+          <div class="legend" id="legend"></div>
+        </div>
+      </details>
+
+      <div class="card score-card">
+        <span>通算成績</span>
+        <span>あなた <b id="winYou">0</b></span><span class="vs">–</span><span><b id="winAi">0</b> Muse</span>
+      </div>
+    </aside>
+  </div>
+
+  <p class="foot">Quarto（クアルト）は、4つの特徴を持つピースを並べるフランス生まれのボードゲームです。このページではMuseが相手をします。</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // ---- pieces: id 0..15, bits: 8=tall 4=dark 2=square 1=hollow ----
+  function isTall(p){return (p&8)!==0} function isDark(p){return (p&4)!==0}
+  function isSquare(p){return (p&2)!==0} function isHollow(p){return (p&1)!==0}
+  function pieceName(p){
+    return (isTall(p)?"高い":"低い")+"・"+(isDark(p)?"暗い":"明るい")+"・"+(isSquare(p)?"四角":"丸")+"・"+(isHollow(p)?"穴あり":"穴なし");
+  }
+  function pieceEl(p, label){
+    var wrap=document.createElement("span");
+    wrap.className="piece "+(isTall(p)?"tall":"short")+" "+(isDark(p)?"dark":"light")+" "+(isSquare(p)?"square":"round");
+    wrap.setAttribute("aria-label", label||pieceName(p));
+    var body=document.createElement("span"); body.className="body";
+    var inner=document.createElement("span"); inner.className=isHollow(p)?"hole":"cap";
+    body.appendChild(inner); wrap.appendChild(body);
+    var gauge=document.createElement("span"); gauge.className="hgauge"; gauge.setAttribute("aria-hidden","true");
+    var fill=document.createElement("i"); gauge.appendChild(fill); wrap.appendChild(gauge);
+    return wrap;
+  }
+
+  var LINES=[];
+  (function(){
+    var r,c;
+    for(r=0;r<4;r++) LINES.push([r*4,r*4+1,r*4+2,r*4+3]);
+    for(c=0;c<4;c++) LINES.push([c,c+4,c+8,c+12]);
+    LINES.push([0,5,10,15]); LINES.push([3,6,9,12]);
+  })();
+  // 2x2 blocks (hard mode only): 9 squares, top-left (r,c) for r,c in 0..2
+  var SQUARES=[];
+  (function(){
+    var r,c;
+    for(r=0;r<3;r++) for(c=0;c<3;c++){
+      var tl=r*4+c;
+      SQUARES.push([tl, tl+1, tl+4, tl+5]);
+    }
+  })();
+  function isHardMode(){
+    var sel=document.getElementById("diff");
+    return !!(sel && sel.value==="hard");
+  }
+  function winSets(){
+    // returns [{cells:[...], type:"line"|"square"}]
+    var sets=LINES.map(function(cells){ return {cells:cells, type:"line"}; });
+    if(isHardMode()){
+      sets=sets.concat(SQUARES.map(function(cells){ return {cells:cells, type:"square"}; }));
+    }
+    return sets;
+  }
+  var BIT_INFO=[
+    {bit:8, one:"高い", zero:"低い"},
+    {bit:4, one:"暗い色の", zero:"明るい色の"},
+    {bit:2, one:"四角い", zero:"丸い"},
+    {bit:1, one:"穴ありの", zero:"穴なしの"}
+  ];
+  function checkWin(bd){
+    var sets=winSets();
+    for(var si=0;si<sets.length;si++){
+      var cells=sets[si].cells, ps=[bd[cells[0]],bd[cells[1]],bd[cells[2]],bd[cells[3]]];
+      if(ps[0]===null||ps[1]===null||ps[2]===null||ps[3]===null) continue;
+      for(var bi=0;bi<BIT_INFO.length;bi++){
+        var bit=BIT_INFO[bi].bit, v=(ps[0]&bit)!==0;
+        if(((ps[1]&bit)!==0)===v && ((ps[2]&bit)!==0)===v && ((ps[3]&bit)!==0)===v){
+          return {line:cells, cells:cells, type:sets[si].type, isSquare:sets[si].type==="square", attr:(v?BIT_INFO[bi].one:BIT_INFO[bi].zero)};
+        }
+      }
+    }
+    return null;
+  }
+  function winPlaceLabel(winInfo){
+    if(!winInfo) return "1列";
+    return winInfo.type==="square" ? "2×2のブロック" : "1列";
+  }
+  function emptyCells(bd){var out=[];for(var i=0;i<16;i++) if(bd[i]===null) out.push(i); return out;}
+  function findWinningCell(bd, piece){
+    var cells=emptyCells(bd);
+    for(var i=0;i<cells.length;i++){
+      var copy=bd.slice(); copy[cells[i]]=piece;
+      if(checkWin(copy)) return cells[i];
+    }
+    return -1;
+  }
+  // ---- fast board logic for search (sets = arrays of 4 cell indices) ----
+  function currentSets(){ return winSets().map(function(s){ return s.cells; }); }
+  function isWinBoard(bd, sets){
+    for(var si=0;si<sets.length;si++){
+      var cs=sets[si], a=bd[cs[0]], b=bd[cs[1]], c=bd[cs[2]], d=bd[cs[3]];
+      if(a===null||b===null||c===null||d===null) continue;
+      if( ((a&b&c&d) | (~(a|b|c|d) & 15)) !== 0 ) return true;
+    }
+    return false;
+  }
+  // can `piece` complete some set that already has exactly 3 pieces?
+  function canWinWith(bd, piece, sets){
+    for(var si=0;si<sets.length;si++){
+      var cs=sets[si], filled=[], empty=0;
+      for(var k=0;k<4;k++){ if(bd[cs[k]]===null) empty++; else filled.push(bd[cs[k]]); }
+      if(empty!==1 || filled.length!==3) continue;
+      var and3=filled[0]&filled[1]&filled[2], or3=filled[0]|filled[1]|filled[2];
+      if( ((and3 & piece) | ((~or3 & 15) & (~piece & 15))) !== 0 ) return true;
+    }
+    return false;
+  }
+  function pieceCanWin(bd, piece){ return canWinWith(bd, piece, currentSets()); }
+  function threatCount(bd, sets){
+    var n=0;
+    for(var si=0;si<sets.length;si++){
+      var cs=sets[si], filled=[];
+      for(var k=0;k<4;k++){ if(bd[cs[k]]!==null) filled.push(bd[cs[k]]); }
+      if(filled.length!==3) continue;
+      var and3=filled[0]&filled[1]&filled[2], or3=filled[0]|filled[1]|filled[2];
+      if( (and3 | (~or3 & 15)) !== 0 ) n++;
+    }
+    return n;
+  }
+  function remainingPieces(bd){
+    var onBoard={}, pool=[], i;
+    for(i=0;i<16;i++) if(bd[i]!==null) onBoard[bd[i]]=true;
+    for(i=0;i<16;i++) if(!onBoard[i]) pool.push(i);
+    return pool;
+  }
+  // Heuristic: how strong is placing `piece` on `cell` (building sets, or occupying a threat's last cell)
+  function placementScoreS(bd, piece, cell, sets){
+    var copy=bd.slice(); copy[cell]=piece;
+    var score=0;
+    for(var si=0;si<sets.length;si++){
+      var cells=sets[si];
+      if(cells.indexOf(cell)===-1) continue;
+      var before=0, filled=[];
+      for(var k=0;k<4;k++){
+        if(bd[cells[k]]!==null) before++;
+        if(copy[cells[k]]!==null) filled.push(copy[cells[k]]);
+      }
+      if(before===3) score+=4; // sitting on a 3-threat's empty cell denies it to everyone
+      if(filled.length<2) continue;
+      for(var bi=0;bi<BIT_INFO.length;bi++){
+        var bit=BIT_INFO[bi].bit, v=(piece&bit)!==0, all=true;
+        for(var m=0;m<filled.length;m++){ if(((filled[m]&bit)!==0)!==v){all=false;break;} }
+        if(all) score += (filled.length===4?20:(filled.length===3?6:(filled.length===2?1.6:0)));
+      }
+    }
+    return score;
+  }
+  function placementScore(bd, piece, cell){
+    return placementScoreS(bd, piece, cell, currentSets()) + Math.random()*0.6;
+  }
+  function bestPlacement(bd, piece){
+    var cells=emptyCells(bd), best=-1, bestScore=-1e9;
+    for(var i=0;i<cells.length;i++){
+      var s=placementScore(bd, piece, cells[i]);
+      if(s>bestScore){bestScore=s;best=cells[i];}
+    }
+    return best;
+  }
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function shuffled(arr){
+    var a=arr.slice();
+    for(var i=a.length-1;i>0;i--){
+      var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t;
+    }
+    return a;
+  }
+
+  // ---- AI: lookahead search (values are always from Claude's perspective) ----
+  var SEARCH=null; // {sets, placeK, giveK}
+  function otherPlayer(p){ return p==="ai" ? "you" : "ai"; }
+  function evalGiveLeaf(bd, giver){
+    var receiver=otherPlayer(giver), pool=remainingPieces(bd);
+    if(!pool.length) return 0;
+    var winCount=0;
+    for(var i=0;i<pool.length;i++) if(canWinWith(bd, pool[i], SEARCH.sets)) winCount++;
+    if(winCount===pool.length) return receiver==="ai" ? 900 : -900; // giver is forced to hand over a win
+    var score=winCount*14 + threatCount(bd, SEARCH.sets)*3; // a hotter board favours whoever places next
+    return receiver==="ai" ? score : -score;
+  }
+  function evalPlaceLeaf(bd, piece, placer){
+    var cells=emptyCells(bd), best=-1e9;
+    for(var i=0;i<cells.length;i++){
+      var s=placementScoreS(bd, piece, cells[i], SEARCH.sets);
+      if(s>best) best=s;
+    }
+    if(best===-1e9) best=0;
+    var v=best*0.8;
+    return placer==="ai" ? v : -v;
+  }
+  function searchGive(bd, giver, depth, alpha, beta){
+    var pool=remainingPieces(bd);
+    if(!pool.length) return 0;
+    if(depth<=0) return evalGiveLeaf(bd, giver);
+    var receiver=otherPlayer(giver), safe=[], winning=[], i;
+    for(i=0;i<pool.length;i++){ (canWinWith(bd, pool[i], SEARCH.sets) ? winning : safe).push(pool[i]); }
+    var candidates = safe.length ? safe : winning; // handing over an immediate win is never right while a safe piece exists
+    // order by how little the receiver can build with the piece, keep the most relevant few
+    var empties=emptyCells(bd);
+    var scored=candidates.map(function(p){
+      var maxS=-1e9;
+      for(var j=0;j<empties.length;j++){ var s=placementScoreS(bd, p, empties[j], SEARCH.sets); if(s>maxS) maxS=s; }
+      return {p:p, s:maxS};
+    });
+    scored.sort(function(a,b){ return a.s-b.s; });
+    var list=scored.slice(0, SEARCH.giveK).map(function(o){ return o.p; });
+    var maximizing = giver==="ai";
+    var best = maximizing ? -1e9 : 1e9;
+    for(i=0;i<list.length;i++){
+      var v=searchPlace(bd, list[i], receiver, depth-1, alpha, beta);
+      if(maximizing){ if(v>best) best=v; if(best>alpha) alpha=best; }
+      else{ if(v<best) best=v; if(best<beta) beta=best; }
+      if(beta<=alpha) break;
+    }
+    return best;
+  }
+  function searchPlace(bd, piece, placer, depth, alpha, beta){
+    if(canWinWith(bd, piece, SEARCH.sets)) return placer==="ai" ? (1000 + depth*10) : -(1000 + depth*10);
+    var empties=emptyCells(bd);
+    if(!empties.length) return 0;
+    if(depth<=0) return evalPlaceLeaf(bd, piece, placer);
+    var scored=empties.map(function(cell){
+      return {cell:cell, s:placementScoreS(bd, piece, cell, SEARCH.sets)};
+    });
+    scored.sort(function(a,b){ return b.s-a.s; });
+    var list=scored.slice(0, SEARCH.placeK).map(function(o){ return o.cell; });
+    var maximizing = placer==="ai";
+    var best = maximizing ? -1e9 : 1e9;
+    for(var i=0;i<list.length;i++){
+      var nb=bd.slice(); nb[list[i]]=piece;
+      var v;
+      if(isWinBoard(nb, SEARCH.sets)) v = placer==="ai" ? (1000 + depth*10) : -(1000 + depth*10);
+      else v = searchGive(nb, placer, depth, alpha, beta);
+      if(maximizing){ if(v>best) best=v; if(best>alpha) alpha=best; }
+      else{ if(v<best) best=v; if(best<beta) beta=best; }
+      if(beta<=alpha) break;
+    }
+    return best;
+  }
+  function setupSearch(diff){
+    SEARCH={ sets:currentSets(), placeK:(diff==="hard"?4:4), giveK:(diff==="hard"?4:4) };
+    return diff==="hard" ? 3 : 2; // placements to read ahead beyond the move being chosen
+  }
+  function aiPlace(piece){
+    var diff=el.diff.value;
+    var winCell=findWinningCell(state.board, piece);
+    if(diff==="easy"){
+      if(winCell!==-1 && Math.random()<0.7) return winCell;
+      if(Math.random()<0.45) return bestPlacement(state.board, piece);
+      return pick(emptyCells(state.board));
+    }
+    if(winCell!==-1) return winCell;
+    var depth=setupSearch(diff);
+    // Visit cells in random order: equally good moves (on an empty board the
+    // symmetric cells all score the same) then resolve to a random one of
+    // them instead of always the first cell in scan order.
+    var empties=shuffled(emptyCells(state.board)), bestCell=empties[0], bestVal=-1e9, alpha=-1e9;
+    for(var i=0;i<empties.length;i++){
+      var nb=state.board.slice(); nb[empties[i]]=piece;
+      var v=searchGive(nb, "ai", depth, alpha, 1e9);
+      if(v>bestVal){ bestVal=v; bestCell=empties[i]; }
+      if(bestVal>alpha) alpha=bestVal;
+    }
+    return bestCell;
+  }
+  function aiGive(){
+    var rest=[];
+    for(var p=0;p<16;p++) if(!state.used[p]) rest.push(p);
+    var diff=el.diff.value;
+    var safe=rest.filter(function(p){ return !pieceCanWin(state.board, p); });
+    if(diff==="easy"){
+      if(safe.length && Math.random()<0.55) return pick(safe);
+      return pick(rest);
+    }
+    if(safe.length===0){
+      // forced to hand over a winning piece: pick the one with the fewest winning cells
+      var bestForced=rest[0], fewest=99;
+      for(var f=0;f<rest.length;f++){
+        var cells=emptyCells(state.board), n=0;
+        for(var g=0;g<cells.length;g++){
+          var cp=state.board.slice(); cp[cells[g]]=rest[f];
+          if(isWinBoard(cp, currentSets())) n++;
+        }
+        if(n<fewest){ fewest=n; bestForced=rest[f]; }
+      }
+      return bestForced;
+    }
+    var depth=setupSearch(diff);
+    var bestP=safe[0], bestVal=-1e9, alpha=-1e9;
+    for(var i=0;i<safe.length;i++){
+      var v=searchPlace(state.board, safe[i], "you", depth, alpha, 1e9);
+      if(v>bestVal){ bestVal=v; bestP=safe[i]; }
+      if(bestVal>alpha) alpha=bestVal;
+    }
+    return bestP;
+  }
+
+  // ---- state / UI ----
+  var el={};
+  ["board","tray","speech","statusBox","statusMain","statusSub","handBox","handSlot","handText",
+   "remainCount","log","overlay","overlayText","diff","winYou","winAi","hardBanner","trayHint",
+   "faceBox","moodChip"].forEach(function(id){ el[id]=document.getElementById(id); });
+  function syncHardUI(){
+    var hard=isHardMode();
+    if(el.hardBanner) el.hardBanner.classList.toggle("show", hard);
+    document.body.setAttribute("data-hard", hard?"1":"0");
+    if(el.trayHint){
+      el.trayHint.textContent = hard
+        ? "ハードモード中：あなたの「渡す番」のときだけ選べます。1列だけでなく、2×2ブロックで揃ってしまうピースも要注意です。高さの見分け：高いピースは大きくて厚みがあり、横の金色ゲージが満タン。低いピースは小さくて平たく、ゲージは少しだけです。"
+        : "あなたの「渡す番」のときだけ選べます。相手に渡したくない＝相手が揃えられそうなピースは要注意です。高さの見分け：高いピースは大きくて厚みがあり、横の金色ゲージが満タン。低いピースは小さくて平たく、ゲージは少しだけです。";
+    }
+  }
+
+  var state=null;
+  var wins={you:0, ai:0};
+  var gameSeq=0;
+
+  function say(text){ el.speech.textContent=text; }
+
+  // ---- Muse's face: the mood follows how the position reads ----
+  var MOOD_CHIPS={ calm:"ふつう", confident:"余裕", thinking:"考え中…", panicked:"ピンチ！", win:"勝った！", lose:"負けた…" };
+  function faceSVG(m){
+    var S='stroke="#4a2c0a" stroke-width="2.4" stroke-linecap="round" fill="none"';
+    var head=
+      '<line x1="32" y1="13" x2="32" y2="7" stroke="#9a6a14" stroke-width="2.2" stroke-linecap="round"/>'+
+      '<circle cx="32" cy="5.5" r="3" fill="#c98d2d"/>'+
+      '<rect x="5.5" y="30" width="5" height="11" rx="2.5" fill="#c98d2d"/>'+
+      '<rect x="53.5" y="30" width="5" height="11" rx="2.5" fill="#c98d2d"/>'+
+      '<circle cx="32" cy="35" r="23" fill="#f3cd72" stroke="#9a6a14" stroke-width="2"/>'+
+      '<ellipse cx="18.5" cy="42" rx="4" ry="2.6" fill="#f0a35e" opacity=".55"/>'+
+      '<ellipse cx="45.5" cy="42" rx="4" ry="2.6" fill="#f0a35e" opacity=".55"/>';
+    var f="";
+    if(m==="confident"){
+      f='<path d="M19 24.5 Q24 22 29 24.5" '+S+'/>'+
+        '<path d="M35 26.5 Q40 24.5 45 26.5" '+S+'/>'+
+        '<path d="M19.5 32 Q24 35 28.5 32" '+S+'/>'+
+        '<path d="M35.5 32 Q40 35 44.5 32" '+S+'/>'+
+        '<path d="M25 43 Q33 47.5 40.5 40.5" '+S+'/>';
+    }else if(m==="thinking"){
+      f='<path d="M19 25 Q24 22.5 29 25" '+S+'/>'+
+        '<path d="M35 25 Q40 22.5 45 25" '+S+'/>'+
+        '<ellipse cx="24" cy="31" rx="2.5" ry="3.2" fill="#4a2c0a"/>'+
+        '<ellipse cx="40" cy="31" rx="2.5" ry="3.2" fill="#4a2c0a"/>'+
+        '<path d="M27.5 44.5 Q30 42.8 32 44.5 Q34 46.2 36.5 44.5" '+S+'/>'+
+        '<circle cx="51" cy="17" r="1.7" fill="#9a6a14" opacity=".55"/>'+
+        '<circle cx="55.5" cy="11.5" r="2.1" fill="#9a6a14" opacity=".75"/>'+
+        '<circle cx="60" cy="5.5" r="2.6" fill="#9a6a14" opacity=".95"/>';
+    }else if(m==="panicked"){
+      f='<path d="M19 28.5 L29 24.5" '+S+'/>'+
+        '<path d="M45 28.5 L35 24.5" '+S+'/>'+
+        '<circle cx="24" cy="33" r="4.6" fill="#fffdf4" stroke="#4a2c0a" stroke-width="1.8"/>'+
+        '<circle cx="40" cy="33" r="4.6" fill="#fffdf4" stroke="#4a2c0a" stroke-width="1.8"/>'+
+        '<circle cx="24" cy="34" r="1.8" fill="#4a2c0a"/>'+
+        '<circle cx="40" cy="34" r="1.8" fill="#4a2c0a"/>'+
+        '<path d="M24 45.5 Q27 42.8 30 45.5 Q33 48.2 36 45.5 Q38.5 43.2 40.5 45.5" '+S+'/>'+
+        '<path d="M54.5 13 C57.5 18.5 59 21.2 59 24 A4.5 4.5 0 1 1 50 24 C50 21.2 51.5 18.5 54.5 13 Z" fill="#8ecae6" stroke="#4a7a96" stroke-width="1.2"/>';
+    }else if(m==="win"){
+      f='<path d="M19 34.5 Q24 28 29 34.5" '+S+'/>'+
+        '<path d="M35 34.5 Q40 28 45 34.5" '+S+'/>'+
+        '<path d="M24 40.5 Q32 42 40 40.5 Q38 50.5 32 50.5 Q26 50.5 24 40.5 Z" fill="#8a4b16"/>'+
+        '<path d="M9 7 L10.6 11.4 L15 13 L10.6 14.6 L9 19 L7.4 14.6 L3 13 L7.4 11.4 Z" fill="#e3a008"/>'+
+        '<path d="M55 4 L56.2 7.2 L59.5 8.5 L56.2 9.8 L55 13 L53.8 9.8 L50.5 8.5 L53.8 7.2 Z" fill="#e3a008"/>';
+    }else if(m==="lose"){
+      f='<path d="M28.5 29.5 L21 33.5 L28.5 37.5" '+S+'/>'+
+        '<path d="M35.5 29.5 L43 33.5 L35.5 37.5" '+S+'/>'+
+        '<path d="M25 46.5 Q32 41.5 39 46.5" '+S+'/>'+
+        '<path d="M15.5 38 C17.2 41 18 42.4 18 44 A2.6 2.6 0 1 1 13 44 C13 42.4 13.8 41 15.5 38 Z" fill="#8ecae6" stroke="#4a7a96" stroke-width="1"/>';
+    }else{ // calm
+      f='<path d="M19 26 Q24 23.5 29 26" '+S+'/>'+
+        '<path d="M35 26 Q40 23.5 45 26" '+S+'/>'+
+        '<ellipse cx="24" cy="33" rx="2.6" ry="3.4" fill="#4a2c0a"/>'+
+        '<ellipse cx="40" cy="33" rx="2.6" ry="3.4" fill="#4a2c0a"/>'+
+        '<path d="M25.5 42 Q32 47.5 38.5 42" '+S+'/>';
+    }
+    return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Museの表情">'+head+f+'</svg>';
+  }
+  var currentMood="";
+  function setMood(m){
+    if(!MOOD_CHIPS[m]) m="calm";
+    if(m===currentMood && el.faceBox.innerHTML) return;
+    currentMood=m;
+    el.faceBox.innerHTML=faceSVG(m);
+    el.moodChip.textContent=MOOD_CHIPS[m];
+    el.moodChip.setAttribute("data-mood", m);
+  }
+  function setStatus(main, sub, thinking){
+    el.statusMain.textContent=main; el.statusSub.textContent=sub||"";
+    el.statusBox.classList.toggle("thinking", !!thinking);
+  }
+  function addLog(html){
+    var empty=el.log.querySelector(".empty"); if(empty) empty.remove();
+    var li=document.createElement("li"); li.innerHTML=html;
+    el.log.insertBefore(li, el.log.firstChild);
+  }
+  function render(){
+    document.body.setAttribute("data-phase", state.phase);
+    // board
+    el.board.innerHTML="";
+    for(var i=0;i<16;i++){
+      (function(idx){
+        var btn=document.createElement("button");
+        btn.type="button"; btn.className="cell"; btn.setAttribute("role","gridcell");
+        var p=state.board[idx];
+        if(p!==null) btn.appendChild(pieceEl(p));
+        if(state.winLine && state.winLine.indexOf(idx)!==-1) btn.classList.add("win");
+        var canPlace = state.phase==="place" && p===null && !state.over;
+        btn.classList.toggle("placeable", canPlace);
+        btn.disabled=!canPlace;
+        btn.setAttribute("aria-label", p!==null ? pieceName(p)+"が置かれている" : "空きマス");
+        btn.addEventListener("click", function(){ humanPlace(idx); });
+        el.board.appendChild(btn);
+      })(i);
+    }
+    // tray
+    el.tray.innerHTML="";
+    var remain=0;
+    for(var q=0;q<16;q++){
+      (function(p){
+        var b=document.createElement("button");
+        b.type="button"; b.setAttribute("aria-label","ピース："+pieceName(p));
+        b.appendChild(pieceEl(p));
+        if(state.used[p]){ b.classList.add("used"); b.disabled=true; }
+        else{
+          remain++;
+          b.disabled = !(state.phase==="give" && !state.over);
+          b.addEventListener("click", function(){ humanGive(p); });
+        }
+        el.tray.appendChild(b);
+      })(q);
+    }
+    el.remainCount.textContent="残り "+remain+" 個";
+    // hand
+    el.handSlot.innerHTML="";
+    el.handBox.classList.toggle("filled", state.hand!==null);
+    if(state.hand!==null){
+      el.handSlot.appendChild(pieceEl(state.hand));
+      el.handText.innerHTML="「<span class='attrs'>"+pieceName(state.hand)+"</span>」を、盤の空きマスに置いてください。";
+    }else if(state.over){
+      el.handText.textContent="対局は終わりました。「もう一局」から次へどうぞ。";
+    }else if(state.phase==="give"){
+      el.handText.textContent="まずピース置き場から、Museに渡すピースを1つ選んでください。";
+    }else{
+      el.handText.textContent="Museが考え中です…";
+    }
+    el.winYou.textContent=wins.you; el.winAi.textContent=wins.ai;
+  }
+
+  function startGame(){
+    state={ board:Array(16).fill(null), used:{}, hand:null, phase:"give", over:false, winLine:null, moves:0, seq:++gameSeq };
+    el.overlay.classList.remove("show");
+    el.log.innerHTML='<li class="empty">まだ手はありません。</li>';
+    syncHardUI();
+    setMood("calm");
+    if(isHardMode()){
+      say("新しい一局、ハードモードですね。1列に加えて2×2のブロックでも勝ちになります。今回は先の手までしっかり読んで手を選びます。まずはピース置き場から、私に渡すピースを1つ選んでください。ブロックにも気をつけて。");
+      setStatus("あなたの番：渡すピースを選んでください","ハード：1列でも、2×2ブロックでも揃えば勝ちです。渡すピースに注意してください。");
+    }else if(el.diff.value==="normal"){
+      say("新しい一局ですね。今回は先の手まで読んで手を選びますので、簡単には勝たせませんよ。まずは下のピース置き場から、私に渡すピースを1つ選んでください。私がそれを盤に置きます。");
+      setStatus("あなたの番：渡すピースを選んでください","選んだピースはMuseが盤に置きます。揃えられそうなピースを渡すと危ないですよ。");
+    }else{
+      say("新しい一局ですね。まずは下のピース置き場から、私に渡すピースを1つ選んでください。私がそれを盤に置きます。");
+      setStatus("あなたの番：渡すピースを選んでください","選んだピースはMuseが盤に置きます。揃えられそうなピースを渡すと危ないですよ。");
+    }
+    render();
+  }
+
+  function finish(winner, winInfo){
+    state.over=true; state.phase="over";
+    setMood(winner==="ai" ? "win" : winner==="you" ? "lose" : "calm");
+    if(winInfo) state.winLine=winInfo.cells||winInfo.line;
+    render();
+    var placeLabel=winPlaceLabel(winInfo);
+    var isSq=winInfo && winInfo.type==="square";
+    if(winner==="you"){
+      wins.you++;
+      el.overlayText.innerHTML="あなたの勝ちです！<br>「"+winInfo.attr+"」ピースが"+placeLabel+"に揃いました。"+(isSq?"<br>2×2ブロックでの Quarto! です。":"");
+      say(isSq
+        ? "Quarto! ……やられました。2×2のブロックで「"+winInfo.attr+"」が揃っていますね。ハードモードならではの決まり手です。見事です。もう一局どうですか？"
+        : "Quarto! ……やられました。「"+winInfo.attr+"」が揃っていますね。見事です。もう一局どうですか？");
+      setStatus("あなたの勝ちです 🎉","「"+winInfo.attr+"」ピースが"+placeLabel+"に揃いました。");
+    }else if(winner==="ai"){
+      wins.ai++;
+      el.overlayText.innerHTML="Museの勝ちです。<br>「"+winInfo.attr+"」ピースが"+placeLabel+"に揃いました。"+(isSq?"<br>2×2ブロックでの Quarto! です。":"");
+      say(isSq
+        ? "Quarto! 2×2のブロックで「"+winInfo.attr+"」ピースが揃いました。ハードモードではブロックからも目が離せませんね。"
+        : "Quarto! 「"+winInfo.attr+"」ピースが揃いました。渡してくださったピース、ありがたく使わせてもらいました。");
+      setStatus("Museの勝ちです","「"+winInfo.attr+"」ピースが"+placeLabel+"に揃いました。盤の光っているマスを見てみてください。");
+    }else{
+      el.overlayText.innerHTML=isHardMode()
+        ? "引き分けです。<br>16個すべて置いても、列も2×2ブロックも揃いませんでした。"
+        : "引き分けです。<br>16個すべて置いても揃いませんでした。";
+      say("全部埋まって引き分け。なかなか固い一局でしたね。");
+      setStatus("引き分けです", isHardMode() ? "16個すべて置きましたが、揃う列も2×2ブロックもありませんでした。" : "16個すべて置きましたが、揃う列はありませんでした。");
+    }
+    el.winYou.textContent=wins.you; el.winAi.textContent=wins.ai;
+    var seq=state.seq;
+    setTimeout(function(){ if(state && state.seq===seq && state.over) el.overlay.classList.add("show"); }, winner?650:300);
+  }
+
+  function afterPlace(who){
+    var w=checkWin(state.board);
+    if(w){ finish(who, w); return true; }
+    if(emptyCells(state.board).length===0){ finish(null, null); return true; }
+    return false;
+  }
+
+  // Human gives a piece -> AI places it -> AI gives next piece
+  function humanGive(p){
+    if(state.phase!=="give" || state.over || state.used[p]) return;
+    state.used[p]=true; state.phase="ai"; state.moves++;
+    addLog("<b class='you'>あなた</b> が「"+pieceName(p)+"」をMuseに渡しました。");
+    say("「"+pieceName(p)+"」ですね。どこに置こうかな…");
+    setMood("thinking");
+    setStatus("Museが考え中です…","渡されたピースを置く場所を考えています。", true);
+    render();
+    var seq=state.seq;
+    setTimeout(function(){
+      if(!state || state.seq!==seq || state.over) return;
+      var cell=aiPlace(p);
+      state.board[cell]=p;
+      addLog("<b class='ai'>Muse</b> が「"+pieceName(p)+"」を盤に置きました。");
+      if(afterPlace("ai")) return;
+      // AI gives a piece to the human
+      var next=aiGive();
+      state.used[next]=true; state.hand=next; state.phase="place";
+      var danger=pieceCanWin(state.board, next);
+      // Handing over a piece you can win with = Muse is in trouble;
+      // a live threat left on the board = Muse is sitting comfortably.
+      setMood(danger ? "panicked" : (threatCount(state.board, currentSets())>0 ? "confident" : "calm"));
+      say(danger
+        ? "では次はこれをどうぞ。「"+pieceName(next)+"」です。……おっと、置き場所次第では揃ってしまうかも。慎重にどうぞ。"
+        : "では次はこれをどうぞ。「"+pieceName(next)+"」です。さあ、どこに置きますか？");
+      setStatus("あなたの番：ピースを置いてください","光っている空きマスをタップすると、その場所に置けます。");
+      render();
+    }, 850);
+  }
+
+  function humanPlace(idx){
+    if(state.phase!=="place" || state.over || state.board[idx]!==null || state.hand===null) return;
+    var p=state.hand; state.hand=null;
+    state.board[idx]=p; state.moves++;
+    addLog("<b class='you'>あなた</b> が「"+pieceName(p)+"」を盤に置きました。");
+    if(afterPlace("you")) return;
+    state.phase="give";
+    var risky=[];
+    for(var q=0;q<16;q++) if(!state.used[q] && pieceCanWin(state.board, q)) risky.push(q);
+    // A piece that completes a set is still in the tray and you must hand one over: Muse likes those odds.
+    setMood(risky.length ? "confident" : "calm");
+    say(risky.length
+      ? (isHardMode()
+          ? "いい置き方ですね。さて次は、私に渡すピースを選んでください。……盤のどこかに、あと1つで揃う列か2×2ブロックができていますよ。"
+          : "いい置き方ですね。さて次は、私に渡すピースを選んでください。……盤のどこかに、あと1つで揃う列ができていますよ。")
+      : "置きましたね。次は私に渡すピースを選んでください。どのピースも一長一短です。");
+    setStatus("あなたの番：渡すピースを選んでください","選んだピースはMuseが盤に置きます。");
+    render();
+  }
+
+  document.getElementById("restartTop").addEventListener("click", startGame);
+  document.getElementById("restartOverlay").addEventListener("click", startGame);
+  el.diff.addEventListener("change", function(){
+    syncHardUI();
+    if(isHardMode()){
+      say("ハードモードに切り替えましたね。次の手から、縦・横・斜めの1列に加えて2×2のブロックでも勝ちになります。私も2×2を狙いますし、2×2で揃うピースは渡しませんよ。読みも一番深くします。");
+      if(state && !state.over){
+        setStatus(el.statusMain.textContent, "ハード適用中：1列でも2×2ブロックでも揃えば勝ちです。");
+      }
+    }else if(el.diff.value==="normal"){
+      say("強さを「ふつう」に変えましたね。この一局の途中から反映します。先の手まで読んで、置く場所も渡すピースも選びます。2×2ブロックは勝ちにならなくなります。");
+    }else{
+      say("強さを「"+el.diff.options[el.diff.selectedIndex].text+"」に変えましたね。この一局の途中から反映します。2×2ブロックは勝ちにならなくなります。");
+    }
+  });
+
+  // legend
+  var legend=document.getElementById("legend");
+  var legendData=[
+    {a:8,b:0,t:"高い ／ 低い"},
+    {a:4,b:0,t:"暗い ／ 明るい"},
+    {a:2,b:0,t:"四角い ／ 丸い"},
+    {a:1,b:0,t:"穴あり ／ 穴なし"}
+  ];
+  legendData.forEach(function(d){
+    var div=document.createElement("div");
+    div.appendChild(pieceEl(d.a)); div.appendChild(pieceEl(d.b));
+    var s=document.createElement("span"); s.textContent=d.t; div.appendChild(s);
+    legend.appendChild(div);
+  });
+
+  startGame();
+})();
+</script>
+</body>
+</html>
