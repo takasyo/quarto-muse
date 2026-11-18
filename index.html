@@ -298,8 +298,8 @@
       <label class="diff">Museの強さ
         <select id="diff" aria-label="Museの強さとルール">
           <option value="easy">かんたん</option>
-          <option value="normal" selected>ふつう</option>
-          <option value="hard">つよい — ハード（2×2でも勝ち）</option>
+          <option value="normal">ふつう</option>
+          <option value="hard" selected>つよい — ハード（2×2でも勝ち）</option>
         </select>
       </label>
       <button class="btn primary" id="restartTop" type="button">最初から</button>
@@ -829,22 +829,49 @@
   }
 
   function startGame(){
-    state={ board:Array(16).fill(null), used:{}, hand:null, phase:"give", over:false, winLine:null, moves:0, seq:++gameSeq };
+    var humanFirst = Math.random() < 0.5;
+    state={ board:Array(16).fill(null), used:{}, hand:null, phase:humanFirst?"give":"ai", over:false, winLine:null, moves:0, seq:++gameSeq, first:humanFirst?"you":"ai" };
     el.overlay.classList.remove("show");
     el.log.innerHTML='<li class="empty">まだ手はありません。</li>';
     syncHardUI();
     setMood("calm");
-    if(isHardMode()){
-      say("新しい一局、ハードモードですね。1列に加えて2×2のブロックでも勝ちになります。今回は先の手までしっかり読んで手を選びます。まずはピース置き場から、私に渡すピースを1つ選んでください。ブロックにも気をつけて。");
-      setStatus("あなたの番：渡すピースを選んでください","ハード：1列でも、2×2ブロックでも揃えば勝ちです。渡すピースに注意してください。");
-    }else if(el.diff.value==="normal"){
-      say("新しい一局ですね。今回は先の手まで読んで手を選びますので、簡単には勝たせませんよ。まずは下のピース置き場から、私に渡すピースを1つ選んでください。私がそれを盤に置きます。");
-      setStatus("あなたの番：渡すピースを選んでください","選んだピースはMuseが盤に置きます。揃えられそうなピースを渡すと危ないですよ。");
-    }else{
-      say("新しい一局ですね。まずは下のピース置き場から、私に渡すピースを1つ選んでください。私がそれを盤に置きます。");
-      setStatus("あなたの番：渡すピースを選んでください","選んだピースはMuseが盤に置きます。揃えられそうなピースを渡すと危ないですよ。");
+    if(humanFirst){
+      if(isHardMode()){
+        say("新しい一局、ハードモードですね。1列に加えて2×2のブロックでも勝ちになります。今回は先の手までしっかり読んで手を選びます。抽選であなたが先攻です。まずはピース置き場から、私に渡すピースを1つ選んでください。ブロックにも気をつけて。");
+        setStatus("あなたが先攻です：渡すピースを選んでください","ハード：1列でも、2×2ブロックでも揃えば勝ちです。渡すピースに注意してください。");
+      }else if(el.diff.value==="normal"){
+        say("新しい一局ですね。今回は先の手まで読んで手を選びますので、簡単には勝たせませんよ。抽選であなたが先攻です。まずは下のピース置き場から、私に渡すピースを1つ選んでください。私がそれを盤に置きます。");
+        setStatus("あなたが先攻です：渡すピースを選んでください","選んだピースはMuseが盤に置きます。揃えられそうなピースを渡すと危ないですよ。");
+      }else{
+        say("新しい一局ですね。抽選であなたが先攻です。まずは下のピース置き場から、私に渡すピースを1つ選んでください。私がそれを盤に置きます。");
+        setStatus("あなたが先攻です：渡すピースを選んでください","選んだピースはMuseが盤に置きます。揃えられそうなピースを渡すと危ないですよ。");
+      }
+      render();
+      return;
     }
+    // Muse is first: Muse gives the first piece, you place it.
+    if(isHardMode()){
+      say("新しい一局、ハードモードですね。1列に加えて2×2のブロックでも勝ちになります。今回は先の手までしっかり読んで手を選びます。抽選で私が先攻です。まず私があなたに渡すピースを選びますね。");
+      setStatus("Museが先攻です：考え中…","Museがあなたに渡すピースを選んでいます。ハード：1列でも、2×2ブロックでも揃えば勝ちです。", true);
+    }else{
+      say("新しい一局ですね。抽選で私が先攻です。まず私があなたに渡すピースを選びますね。私が選んだピースを、あなたが盤に置いてください。");
+      setStatus("Museが先攻です：考え中…","Museがあなたに渡すピースを選んでいます。", true);
+    }
+    setMood("thinking");
     render();
+    var seq=state.seq;
+    setTimeout(function(){
+      if(!state || state.seq!==seq || state.over) return;
+      var rest=[];
+      for(var p=0;p<16;p++) if(!state.used[p]) rest.push(p);
+      var first=pick(rest);
+      state.used[first]=true; state.hand=first; state.phase="place";
+      addLog("<b class='ai'>Muse</b> が「"+pieceName(first)+"」をあなたに渡しました。");
+      setMood("calm");
+      say("私が先攻です。ではこれをどうぞ。「"+pieceName(first)+"」です。さあ、どこに置きますか？");
+      setStatus("あなたの番：ピースを置いてください","光っている空きマスをタップすると、その場所に置けます。");
+      render();
+    }, 850);
   }
 
   function finish(winner, winInfo){
