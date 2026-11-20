@@ -140,8 +140,8 @@ const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function App() {
   const [, setTick] = useState(0);
-  const [difficulty, setDifficulty] = useState<Difficulty>("hard");
-  const diffRef = useRef<Difficulty>("hard");
+  const [difficulty, setDifficulty] = useState<Difficulty>("saikyo");
+  const diffRef = useRef<Difficulty>("saikyo");
   const g = useRef<G>({
     board: emptyBoard(),
     used: new Array<boolean>(16).fill(false),
