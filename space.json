@@ -1,0 +1,8 @@
+{
+  "runtime": "typescript",
+  "platformVersion": 29,
+  "entry": "client/dist/index.html",
+  "name": "Quarto",
+  "slug": "quarto-2",
+  "managedCronJobs": []
+}
